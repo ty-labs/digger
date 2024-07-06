@@ -2,10 +2,12 @@ package utils
 
 import (
 	"fmt"
-	"github.com/diggerhq/digger/libs/orchestrator"
-	github2 "github.com/diggerhq/digger/libs/orchestrator/github"
 	"log"
 	"strconv"
+
+	comment_utils "github.com/diggerhq/digger/libs/comment_utils/utils"
+	"github.com/diggerhq/digger/libs/orchestrator"
+	github2 "github.com/diggerhq/digger/libs/orchestrator/github"
 )
 
 type CommentReporter struct {
@@ -35,17 +37,20 @@ func ReportInitialJobsStatus(cr *CommentReporter, jobs []orchestrator.Job) error
 	prNumber := cr.PrNumber
 	prService := cr.PrService
 	commentId := cr.CommentId
+
 	message := ""
-	if len(jobs) == 0 {
-		message = message + ":construction_worker: No projects impacted"
+	if len(jobs) > 0 {
+		headers := []string{"Project", "Status"}
+		message = comment_utils.CreateTableComment[orchestrator.Job](headers, jobs, func(_ int, job orchestrator.Job) []string {
+			return []string{
+				fmt.Sprintf(":clock11: **%v**", job.ProjectName),
+				"pending...",
+			}
+		})
 	} else {
-		message = message + fmt.Sprintf("| Project | Status |\n")
-		message = message + fmt.Sprintf("|---------|--------|\n")
-		for _, job := range jobs {
-			message = message + fmt.Sprintf(""+
-				"|:clock11: **%v**|pending...|\n", job.ProjectName)
-		}
+		message = ":construction_worker: No projects impacted"
 	}
+
 	err := prService.EditComment(prNumber, commentId, message)
 	return err
 }
